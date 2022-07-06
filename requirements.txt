@@ -1,3 +1,5 @@
-aws-cdk-lib>=2.0.0, <=2.21.1
+aws-cdk-lib>=2.30.0
+aws-cdk.aws-lambda-python-alpha
 constructs>=10.0.0
 types-boto3
+boto3
