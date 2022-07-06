@@ -64,9 +64,7 @@ $ cdk deploy
 
 ## Project TODO
 
-- Put the tidal data file in the bucket
-- Create a lambda which writes a file to the bucket and ensures it is set to be public
-- Update the Lambda to read the tidal data, and output an ICal file using https://pypi.org/project/ics/
+- Add a custom domain
 - Create a state machine to generate the tidal data and trigger the lambda
 
 ## Project Log
@@ -75,3 +73,13 @@ $ cdk deploy
 - Started to modify the code to make objects public and remove S3 access points
 - Tested that example ICS file works and can be served from the S3 bucket.
 - Created a basic Python file (currently just runs locally) to create the ICS data
+- Updated the CDK stacks to correctly deploy S3, Lambda and supporting resources
+- Started adding a CNAME to the S3 bucket in a custom R53 zone, but this isn't complete
+- Updated the Lambda function to correctly transform the data file
+
+## Future improvements
+
+- Allow data to be generated for multiple locations, or a custom threshold of depth
+- Adding an ASCII chart in the calendar event description
+- In the event description, provide a link to a URL to get more detailed information for that specific day
+- Add the Feed name into the iCal file
