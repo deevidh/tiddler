@@ -1,6 +1,9 @@
 from aws_cdk import App
-from stacks.tiddler_s3_lambda_stack import TiddlerS3LambdaStack
+from aws_cdk import Environment
+from stacks.tiddler_stack import TiddlerStack
+
+env_sandbox = Environment(account="593130735504", region="eu-west-2")
 
 app = App()
-TiddlerS3LambdaStack(app, "TiddlerApp")
+TiddlerStack(app, "TiddlerApp", env_sandbox)
 app.synth()
