@@ -11,12 +11,70 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_s3_deployment as s3deployment,
     aws_route53 as route53,
-    aws_s3objectlambda as s3_object_lambda,
+    aws_stepfunctions as sfn,
+    aws_stepfunctions_tasks as sfn_tasks
 )
 
 class TiddlerStack(Stack):
     def __init__(self, app: App, id: str, env: Environment) -> None:
         super().__init__(app, id, env=env)
+
+        # Lambda Handlers Definitions
+        submit_lambda = _lambda.Function(self, 'submitLambda',
+                                         handler='lambda_function.lambda_handler',
+                                         runtime=_lambda.Runtime.PYTHON_3_9,
+                                         code=_lambda.Code.from_asset('lambda/submit'))
+
+        status_lambda = _lambda.Function(self, 'statusLambda',
+                                         handler='lambda_function.lambda_handler',
+                                         runtime=_lambda.Runtime.PYTHON_3_9,
+                                         code=_lambda.Code.from_asset('lambda/status'))
+
+        # Step functions Definition
+        submit_job = sfn_tasks.LambdaInvoke(
+            self, "Submit Job",
+            lambda_function=submit_lambda,
+            output_path="$.Payload",
+        )
+
+        wait_job = sfn.Wait(
+            self, "Wait 30 Seconds",
+            time=sfn.WaitTime.duration(
+                Duration.seconds(30))
+        )
+
+        status_job = sfn_tasks.LambdaInvoke(
+            self, "Get Status",
+            lambda_function=status_lambda,
+            output_path="$.Payload",
+        )
+
+        fail_job = sfn.Fail(
+            self, "Fail",
+            cause='AWS Batch Job Failed',
+            error='DescribeJob returned FAILED'
+        )
+
+        succeed_job = sfn.Succeed(
+            self, "Succeeded",
+            comment='AWS Batch Job succeeded'
+        )
+
+        # Create Chain
+
+        definition = submit_job.next(wait_job)\
+            .next(status_job)\
+            .next(sfn.Choice(self, 'Job Complete?')
+                  .when(sfn.Condition.string_equals('$.status', 'FAILED'), fail_job)
+                  .when(sfn.Condition.string_equals('$.status', 'SUCCEEDED'), succeed_job)
+                  .otherwise(wait_job))
+
+        # Create state machine
+        sm = sfn.StateMachine(
+            self, "TiddlerStateMachine",
+            definition=definition,
+            timeout=Duration.minutes(5),
+        )
 
         # Set up a public bucket to serve the iCal file
         bucket = s3.Bucket(self, "tiddler",
