@@ -1,10 +1,9 @@
 FROM ubuntu:latest
-RUN echo "tzdata tzdata/Areas select Europe" >> /tmp/timezone.cfg; \
-    echo "tzdata tzdata/Zones/Europe select London" >> /tmp/timezone.cfg; \
-    debconf-set-selections /tmp/timezone.cfg && \
-    rm -f /etc/timezone /etc/localtime && \
+COPY --chmod=755 generate-tidal-data.sh /usr/bin/
+RUN echo tzdata tzdata/Areas select Europe | debconf-set-selections; \
+    echo tzdata tzdata/Zones/Europe select London | debconf-set-selections; \
     apt-get update && \
-    apt-get install -y tzdata xtide xtide-data-nonfree
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata xtide xtide-data-nonfree awscli;
 RUN useradd -m -s /bin/bash ubuntu;
 USER ubuntu
-ENTRYPOINT ["/usr/bin/tide"]
+CMD ["/usr/bin/generate-tidal-data.sh"]

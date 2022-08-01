@@ -10,7 +10,6 @@ The structure of the project is based on this example: https://github.com/aws-sa
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
-
 ### Python setup
 
 This project is set up like a standard Python project. The initialization process also creates a virtualenv within this

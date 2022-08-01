@@ -20,8 +20,8 @@ from ics import Calendar, Event
 def handler(event, context):
     status=True
     print(f"Create_ical_lambda was invoked")
-    #print(f"event: {event}")
-    if not {"source_bucket", "source_file", "dest_bucket", "dest_file"} <= event.keys():
+    print(f"event: {event}")
+    if not {"csv_file", "public_bucket"} <= event.keys():
         return {
             "statusCode": 500,
             "body": json.dumps({
@@ -30,10 +30,10 @@ def handler(event, context):
             )
         }
 
-    tidal_data = getTidalDataFile(event['source_bucket'], event['source_file'])
+    tidal_data = getTidalDataFile(event['csv_file'])
     parsed_tidal_data = parseTidalData(tidal_data)
     ical_data = createIcalData(parsed_tidal_data)
-    status = putIcalFile(event['dest_bucket'], event['dest_file'], ical_data)
+    status = putIcalFile(event['public_bucket'], ical_data)
 
     return {
         "statusCode": 200 if status == True else 500,
@@ -42,9 +42,16 @@ def handler(event, context):
         })
     }
 
+def split_s3_path(s3_path):
+    path_parts=s3_path.replace("s3://","").split("/")
+    bucket=path_parts.pop(0)
+    key="/".join(path_parts)
+    return bucket, key
+
 # Retrieve tidal data from specified location in S3
-def getTidalDataFile(source_bucket: str, source_file: str) -> str:
-    print(f"Getting tidal data file from: s3://{source_bucket}/{source_file}")
+def getTidalDataFile(csv_file: str) -> str:
+    print(f"Getting tidal data file from: {csv_file}")
+    source_bucket, source_file = split_s3_path(csv_file)
     s3_client = boto3.client("s3")
     file_content = s3_client.get_object(
         Bucket=source_bucket,
@@ -90,12 +97,13 @@ This event was created automatically by Tiddler, see http://deevid.com/tiddler f
     return tide_cal
 
 # Put the ics file into the specified S3 bucket
-def putIcalFile(dest_bucket: str, dest_file: str, ical_data: str) -> bool:
-    print(f"Writing iCal file to: s3://{dest_bucket}/{dest_file}")
+def putIcalFile(public_bucket: str, ical_data: str) -> bool:
+    dest_file="tides-leith.ics"
+    print(f"Writing iCal file to: s3://{public_bucket}/{dest_file}")
     s3_client = boto3.client("s3")
     response = s3_client.put_object(
         ACL='public-read', # Object is public, iCal feeds will get this object directly from S3
-        Bucket=dest_bucket,
+        Bucket=public_bucket,
         Key=dest_file,
         Body=ical_data.serialize()
     )
