@@ -1,10 +1,23 @@
-Tiddler
+# Tiddler
+
 ---
 
 ## Overview
 
-This CDK projects aims to create an application which can read tidal data from a file, and export the data to an ical file in an S3 bucket.
+This CDK projects creates an application which periodically generates tidal predictions for a given location, extracts some specific information from the predictions and uses it to create an iCalendar file in an S3 bucket which can be subscribed to from an external calendar app.
+
 The structure of the project is based on this example: https://github.com/aws-samples/aws-cdk-examples/tree/master/python/s3-object-lambda
+
+## Components
+
+- Private S3 bucket for holding intermediate files
+- Public S3 bucket which points to the public S3 bucket
+- Scheduled event in EventBridge which is used to trigger the state machine in Step Functions
+- Step Functions state machine which only has two steps:
+  - Run a task on an ECS cluster. The task runs a pre-built docker image which uses XTide to generate tide predictions for Leith. This is output to a CSV file in the private S3 bucket.
+  - Run a Lambda function which reads the CSV file, transforms the data and writes it out to an iCal file in the public S3 bucket.
+
+--
 
 ## Build and Deploy
 
@@ -61,20 +74,7 @@ Using the default profile
 $ cdk deploy
 ```
 
-## Project TODO
-
-- Add a custom domain
-- Create a state machine to generate the tidal data and trigger the lambda
-
-## Project Log
-
-- Got the CDK project building and deploying
-- Started to modify the code to make objects public and remove S3 access points
-- Tested that example ICS file works and can be served from the S3 bucket.
-- Created a basic Python file (currently just runs locally) to create the ICS data
-- Updated the CDK stacks to correctly deploy S3, Lambda and supporting resources
-- Started adding a CNAME to the S3 bucket in a custom R53 zone, but this isn't complete
-- Updated the Lambda function to correctly transform the data file
+---
 
 ## Future improvements
 
