@@ -42,7 +42,7 @@ class TiddlerStack(Stack):
 #            ]
 #        )
 
-        # TODO: Don't hardcode this
+        # TODO: don't hardcode this, or move it up a level?
         zone_name = "sandbox.deevid.net"
         record_name = "tiddler"
 
@@ -130,14 +130,13 @@ class TiddlerStack(Stack):
         #r53_bucket_record = route53.ARecord(self, "S3BucketRecord",
         r53_bucket_record = route53.CnameRecord(self, "S3BucketRecord",
             record_name=record_name,
-            #record_name="tiddler",
             zone=public_zone,
             domain_name=bucket_public.bucket_domain_name
         )
 
         # Set up a private bucket
         bucket_private = s3.Bucket(self, "tiddler-private",
-            bucket_name="tiddler-private-bucket", #TODO rename
+            bucket_name="tiddler-private",
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             encryption=s3.BucketEncryption.S3_MANAGED
         )
@@ -148,14 +147,6 @@ class TiddlerStack(Stack):
             actions=["s3:*Object"],
             resources=[f"{bucket_private.bucket_arn}/*"])
         )
-
-        # TODO: Remove this when the tidal data is generated programatically
-        # Populate bucket with tidal data
-        #s3deployment.BucketDeployment(self, "TidalDataFiles",
-        #    sources=[s3deployment.Source.asset("./s3-data")],
-        #    destination_bucket=bucket_private,
-        #    destination_key_prefix="tidal_data"
-        #)
 
         # Create container overrides to pass in parameters from SFN state to container
         container_overrides=[
@@ -248,14 +239,8 @@ class TiddlerStack(Stack):
         #Schedule the state machine to run every week
         scheduled_event_rule = events.Rule(self, "WeeklySchedule",
             description="Trigger the Tiddler state machine on a schedule",
-            schedule=events.Schedule.cron(minute="0",hour="12",month="*",week_day="1",year="*"),
+            schedule=events.Schedule.cron(minute="0",hour="9",month="*",week_day="4",year="*"),
             targets=[
                events_targets.SfnStateMachine(sm)
             ]
         )
-
-        # TODO: Are these outputs really needed?
-        CfnOutput(self, "publicBucketArn", value=bucket_public.bucket_arn)
-        CfnOutput(self, "privateBucketArn", value=bucket_private.bucket_arn)
-        CfnOutput(self, "createIcalLambdaArn",
-                      value=create_ical_lambda.function_arn)
